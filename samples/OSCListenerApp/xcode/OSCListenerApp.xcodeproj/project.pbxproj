@@ -50,7 +50,7 @@
 		61BA1AB12E4D43D5948C0344 /* OSCListenerApp_Prefix.pch in Headers */ = {isa = PBXBuildFile; fileRef = 1D27B37DD3FC43AC8222B17E /* OSCListenerApp_Prefix.pch */; };
 		36DCE77FE7E84F1F9D740537 /* CinderApp.icns in Resources */ = {isa = PBXBuildFile; fileRef = 9F4AB868446B4254B0C980D3 /* CinderApp.icns */; };
 		32447D4F4F8D4ECA8891B1DD /* Resources.h in Headers */ = {isa = PBXBuildFile; fileRef = 2D6AD32F34B24CD494E04503 /* Resources.h */; };
-		4CB16B0B9437461EBE81CD12 /* OSCListenerAppApp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 253AFD90FA774D8C8C3D547B /* OSCListenerAppApp.cpp */; };
+		4CB16B0B9437461EBE81CD12 /* OSCListenerApp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 253AFD90FA774D8C8C3D547B /* OSCListenerApp.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -68,7 +68,7 @@
 		29B97325FDCFA39411CA2CEA /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = /System/Library/Frameworks/Foundation.framework; sourceTree = "<absolute>"; };
 		5323E6B10EAFCA74003A9687 /* CoreVideo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreVideo.framework; path = /System/Library/Frameworks/CoreVideo.framework; sourceTree = "<absolute>"; };
 		8D1107320486CEB800E47090 /* OSCListenerApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OSCListenerApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		253AFD90FA774D8C8C3D547B /* OSCListenerAppApp.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.cpp; path = ../src/OSCListenerAppApp.cpp; sourceTree = "<group>"; name = OSCListenerAppApp.cpp; };
+		253AFD90FA774D8C8C3D547B /* OSCListenerApp.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.cpp; path = ../src/OSCListenerApp.cpp; sourceTree = "<group>"; name = OSCListenerApp.cpp; };
 		2D6AD32F34B24CD494E04503 /* Resources.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ../include/Resources.h; sourceTree = "<group>"; name = Resources.h; };
 		9F4AB868446B4254B0C980D3 /* CinderApp.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = ../resources/CinderApp.icns; sourceTree = "<group>"; name = CinderApp.icns; };
 		4E09AA240F5C4586AF58D68B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; name = Info.plist; };
@@ -129,7 +129,7 @@
 		080E96DDFE201D6D7F000001 /* Source */ = {
 			isa = PBXGroup;
 			children = (
-				253AFD90FA774D8C8C3D547B /* OSCListenerAppApp.cpp */,
+				253AFD90FA774D8C8C3D547B /* OSCListenerApp.cpp */,
 			);
 			name = Source;
 			sourceTree = "<group>";
@@ -346,7 +346,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4CB16B0B9437461EBE81CD12 /* OSCListenerAppApp.cpp in Sources */,
+				4CB16B0B9437461EBE81CD12 /* OSCListenerApp.cpp in Sources */,
 				8AC35380172C4D8F86B81A81 /* OscBundle.cpp in Sources */,
 				3B0F2E7B32014DA3B3C1DE56 /* OscListener.cpp in Sources */,
 				0E930B269B7A4C219FE687FB /* OscMessage.cpp in Sources */,
