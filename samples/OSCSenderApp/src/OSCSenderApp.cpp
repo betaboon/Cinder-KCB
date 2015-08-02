@@ -69,13 +69,13 @@ void OSCSenderApp::setupOSC(int port = 3000)
 	// assume the broadcast address is this machine's IP address but with 255 as the final value
 	// so to multicast from IP 192.168.1.100, the host should be 192.168.1.255
 	mHost = System::getIpAddress();
-	if (mHost.rfind('.') != string::npos)
-		mHost.replace(mHost.rfind('.') + 1, 3, "255");
-	mSender.setup(mHost, port, true);
+	if (mHost.rfind( '.' ) != string::npos)
+		mHost.replace( mHost.rfind( '.' ) + 1, 3, "255" );
+	mSender.setup( mHost, port, true );
 }
 void OSCSenderApp::setup()
 {
-	setFrameRate(60.0f);
+	setFrameRate( 20.0f );
 	setupOSC();
 	setupKinect();
 }
@@ -106,8 +106,8 @@ void OSCSenderApp::draw()
 				message.addIntArg( v1.y );
 				//console() << i << " - bone -- " << j << "/" << skeleton.size() << " --- " << v0 << " - " << v1 << endl;
 			}
-			message.addIntArg(MESSAGE_END);
-			message.setAddress((boost::format("/cinder/kinect/skeleton/%d") % i).str());
+			message.addIntArg( MESSAGE_END );
+			message.setAddress( (boost::format( "/cinder/kinect/skeleton/%d" ) % i).str() );
 			mSender.sendMessage( message );
 		}
 	}

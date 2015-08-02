@@ -33,8 +33,12 @@ public:
 
 void OSCListenerApp::setup()
 {
-	mListener.setup(3000);
+	mListener.setup( 3000 );
 	mSkeletons.clear();
+
+
+	setFrameRate( 60.0f );
+	glLineWidth( 2.0f );
 }
 
 void OSCListenerApp::update()
@@ -74,7 +78,7 @@ void OSCListenerApp::update()
 			Skeleton skeleton;
 
 			for (int i = 0; i < skeletonSize; i++) {
-				int offset = MESSAGE_FRAME_SIZE + i * MESSAGE_BONE_SIZE;
+				int offset = MESSAGE_FRAME_SIZE + i * MESSAGE_BONE_SIZE - 1;
 				int boneId = message.getArgAsInt32( offset );
 				ivec2 v0 = ivec2(
 					message.getArgAsInt32( offset + 1 ),
