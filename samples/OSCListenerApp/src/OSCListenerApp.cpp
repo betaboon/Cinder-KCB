@@ -103,7 +103,12 @@ void OSCListenerApp::update()
 
 void OSCListenerApp::draw()
 {
-	gl::clear( Color( 0, 0, 0 ) ); 
+	gl::viewport(getWindowSize());
+	gl::clear();
+	gl::setMatricesWindow(getWindowSize());
+	gl::enableAlphaBlending();
+	gl::clear( ColorAf::black() );
+
 	for (std::map<int, Skeleton>::iterator it = mSkeletons.begin(); it != mSkeletons.end(); ++it) {
 		for (Bone bone : it->second) {
 			gl::drawLine( bone.v0, bone.v1 );
