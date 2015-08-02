@@ -34,7 +34,7 @@
 * 
 */
 
-#include "cinder/app/AppBasic.h"
+#include "cinder/app/App.h"
 #include "cinder/app/RendererGl.h"
 #include "cinder/Camera.h"
 #include "cinder/gl/Context.h"
@@ -42,14 +42,15 @@
 #include "cinder/gl/GlslProg.h"
 #include "cinder/gl/Texture.h"
 #include "cinder/gl/VboMesh.h"
+#include "cinder/gl/gl.h"
 #include "cinder/params/Params.h"
 #include "Kinect.h"
 
-class ParticleApp : public ci::app::AppBasic 
+class ParticleApp : public ci::app::App 
 {
 public:
 	void 						draw();
-	void 						prepareSettings( ci::app::AppBasic::Settings* settings );
+	void 						prepareSettings( ci::app::App::Settings* settings );
 	void						resize();			
 	void 						setup();
 	void						update();
@@ -66,12 +67,12 @@ private:
 	ci::gl::TextureRef			mTextureVelocity[ 2 ];
 	
 	ci::CameraPersp				mCamera;
-	ci::Vec3f					mEyePoint;
-	ci::Vec3f					mLookAt;
+	ci::vec3					mEyePoint;
+	ci::vec3					mLookAt;
 	float						mPointCloudDepth;
 
 	float						mParticleDampen;
-	ci::Vec3f					mParticleCenter;
+	ci::vec3					mParticleCenter;
 	float						mParticleSpeed;
 	float						mParticleTrails;
 	
@@ -202,8 +203,8 @@ void ParticleApp::draw()
 void ParticleApp::onFrame( MsKinect::Frame frame )
 {
 	if ( frame.getDepthChannel() ) {
-		Surface16u depth	= MsKinect::depthChannelToSurface( frame.getDepthChannel(), MsKinect::DepthProcessOptions().enableRemoveBackground() );
-		mTextureDepth		= gl::Texture::create( depth );
+		Surface16uRef depth	= MsKinect::depthChannelToSurface( frame.getDepthChannel(), MsKinect::DepthProcessOptions().enableRemoveBackground() );
+		mTextureDepth		= gl::Texture::create( *depth );
 	}
 }
 
@@ -217,7 +218,7 @@ void ParticleApp::resize()
 {
 	glPointSize( 0.25f );
 	mCamera = CameraPersp( getWindowWidth(), getWindowHeight(), 60.0f, 1.0f, 50000.0f );
-	mCamera.setWorldUp( -Vec3f::yAxis() );
+	mCamera.setWorldUp( -vec3( 0, 1, 0 ) );
 }
 
 void ParticleApp::setup()
@@ -246,11 +247,11 @@ void ParticleApp::setup()
 
 	mDrawParams			= true;
 	mDrawTextures		= false;
-	mEyePoint			= Vec3f( 0.0f, 0.0f, 3000.0f );
+	mEyePoint			= vec3( 0.0f, 0.0f, 3000.0f );
 	mFrameRate			= 0.0f;
 	mFullScreen			= isFullScreen();
 	mFullScreenPrev		= mFullScreen;
-	mLookAt				= Vec3f( 0.0f, -500.0f, 0.0f );
+	mLookAt				= vec3( 0.0f, -500.0f, 0.0f );
 	mParticleDampen		= 0.96f;
 	mParticleSpeed		= 0.05f;
 	mParticleTrails		= 0.92f;
@@ -295,8 +296,8 @@ void ParticleApp::setup()
 	
 	struct Vertex
 	{
-		Vec3f position;
-		Vec2f texCoord;
+		vec3 position;
+		vec2 texCoord;
 	};
 	vector<Vertex> vertices;
 	vector<uint32_t> indices;
@@ -304,8 +305,8 @@ void ParticleApp::setup()
 		for ( int32_t y = 0; y < h; ++y ) {
 			indices.push_back( (uint32_t)( x * h + y ) );
 			Vertex vertex;
-			vertex.texCoord = Vec2f( (float)x / (float)( w - 1 ), (float)y / (float)( h - 1 ) );
-			vertex.position = Vec3f(
+			vertex.texCoord = vec2( (float)x / (float)( w - 1 ), (float)y / (float)( h - 1 ) );
+			vertex.position = vec3(
 				( vertex.texCoord.x * 2.0f - 1.0f ) * (float)h, 
 				( vertex.texCoord.y * 2.0f - 1.0f ) * (float)w, 
 				0.0f );
@@ -317,7 +318,7 @@ void ParticleApp::setup()
 	gl::VboRef vboVertices	= gl::Vbo::create( GL_ARRAY_BUFFER,			sizeof( Vertex )	* vertices.size(),	&vertices[ 0 ] );
 	geom::BufferLayout layout;
 	layout.append( geom::Attrib::POSITION,		3, sizeof( Vertex ), 0 );
-	layout.append( geom::Attrib::TEX_COORD_0,	2, sizeof( Vertex ), sizeof( Vec3f ) );
+	layout.append( geom::Attrib::TEX_COORD_0,	2, sizeof( Vertex ), sizeof( vec3 ) );
 	vector<pair<geom::BufferLayout, gl::VboRef> > buffer;
 	buffer.push_back( make_pair( layout, vboVertices ) );
 	mMesh = gl::VboMesh::create( vertices.size(), GL_POINTS, buffer, indices.size(), GL_UNSIGNED_BYTE, vboIndices );
@@ -330,8 +331,6 @@ void ParticleApp::setup()
 	textureFormat.setMagFilter( GL_NEAREST );
 	textureFormat.setMinFilter( GL_NEAREST );
 	textureFormat.setWrap( GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE );
-	textureFormat.setPixelDataFormat( GL_RGBA );
-	textureFormat.setPixelDataType( GL_FLOAT );
 
 	for ( size_t i = 0; i < 2; ++i ) {
 		mTexturePosition[ i ] = gl::Texture2d::create( w, h, textureFormat );
@@ -353,7 +352,7 @@ void ParticleApp::setup()
 	////////////////////////////////////////////////////////////////
 	// Set up parameters
 
-	mParams = params::InterfaceGl::create( "PARAMS", Vec2i( 200, 400 ) );
+	mParams = params::InterfaceGl::create( "PARAMS", vec2( 200, 400 ) );
 	mParams->addParam( "Frame rate",		&mFrameRate,			"", true );
 	mParams->addParam( "Full screen",		&mFullScreen,			"key=f" );
 	mParams->addButton( "Quit",				[ & ]() { quit(); },	"key=q" );
@@ -384,5 +383,5 @@ void ParticleApp::update()
 	}
 }
 
-CINDER_APP_BASIC( ParticleApp, RendererGl( RendererGl::Options().antiAliasing( RendererGl::AA_NONE ).coreProfile().version( 3, 3 ) ) )
+CINDER_APP( ParticleApp, RendererGl( RendererGl::Options().msaa( 0 ).coreProfile().version( 3, 3 ) ) )
  

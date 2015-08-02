@@ -358,18 +358,11 @@ void FaceTracker::run()
 
 						// TODO: check that this port works
 						// could this be done more efficiently/elegantly?
-						mat4 tMatrix = glm::translate( t );
-						// glm makes a rotation matrix from euler angles in Y, X, Z order
-						// see http://glm.g-truc.net/0.9.6/api/a00191.html#ga4e25c9468b6f002c76e9a2412bcfa503
-						mat4 rMatrix = glm::orientate4( vec3( rotation[ 1 ], rotation[ 0 ], rotation[ 2 ] ) );
-						mat4 sMatrix = glm::scale( vec3( 1 ) * scale );
-						face.mPoseMatrix = sMatrix * tMatrix * glm::inverse( tMatrix ) * rMatrix * tMatrix;
-
-						//face.mPoseMatrix.translate( t );
-						//face.mPoseMatrix.rotate( r );
-						//face.mPoseMatrix.translate( -t );
-						//face.mPoseMatrix.translate( t );
-						//face.mPoseMatrix.scale( vec3::one() * scale );
+						face.mPoseMatrix = glm::scale( vec3( 1 ) * scale );
+						face.mPoseMatrix *= glm::translate( t );
+						face.mPoseMatrix *= glm::translate( -t );
+						face.mPoseMatrix *= glm::eulerAngleYXZ( rotation[1], rotation[0], rotation[2] );
+						face.mPoseMatrix *= glm::translate( t );
 					}
 
 					size_t numVertices	= mModel->GetVertexCount();
