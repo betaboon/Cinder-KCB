@@ -35,6 +35,7 @@
 */
 
 #include "cinder/app/App.h"
+#include "cinder/app/RendererGl.h"
 #include "cinder/gl/gl.h"
 #include "Kinect.h"
 
@@ -50,7 +51,6 @@ private:
 	ci::gl::TextureRef	mTextureDepth;
 };
 
-#include "cinder/app/RendererGl.h"
 
 using namespace ci;
 using namespace ci::app;

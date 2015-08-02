@@ -72,6 +72,7 @@ typedef NUI_SKELETON_POSITION_TRACKING_STATE	JointTrackingState;
 typedef KINECT_SKELETON_SELECTION_MODE			SkeletonSelectionMode;
 typedef std::shared_ptr<Device>					DeviceRef;
 typedef std::shared_ptr<class FaceTracker>		FaceTrackerRef;
+typedef std::shared_ptr<class HandTracker>		HandTrackerRef;
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -169,6 +170,8 @@ public:
 	bool								isDepthEnabled() const;
 	//! Returns true if face tracking is enabled.
 	bool								isFaceTrackingEnabled() const;
+	//! Returns true if hand tracking is enabled.
+	bool								isHandTrackingEnabled() const;
 	//! Returns true if infrared stream is enabled.
 	bool								isInfraredEnabled() const;
 	//! Returns true if near mode is enabled.
@@ -183,7 +186,9 @@ public:
 	//! Enables depth stream.
 	DeviceOptions&						enableDepth( bool enable = true );
 	//! Enables face tracking.
-	DeviceOptions&						enableFaceTracking( bool enable = true );
+	DeviceOptions&						enableFaceTracking(bool enable = true);
+	//! Enables hand tracking.
+	DeviceOptions&						enableHandTracking(bool enable = true);
 	//! Enables infrared stream. Disables color stream.
 	DeviceOptions&						enableInfrared( bool enable = true );
 	//! Enables near mode. Kinect for Windows only.
@@ -211,6 +216,7 @@ protected:
 	bool								mEnabledColor;
 	bool								mEnabledDepth;
 	bool								mEnabledFaceTracking;
+	bool								mEnabledHandTracking;
 	bool								mEnabledInfrared;
 	bool								mEnabledNearMode;
 	bool								mEnabledSeatedMode;
@@ -351,13 +357,13 @@ public:
 	
 	//! Set event handler to method with signature void( FaceTracker::Face ).
 	template<typename T, typename Y> 
-	inline void							connectEventHander( T eventHandler, Y* obj )
+	inline void							connectEventHandler( T eventHandler, Y* obj )
 	{
-		connectEventHander( std::bind( eventHandler, obj, std::placeholders::_1 ) );
+		connectEventHandler( std::bind( eventHandler, obj, std::placeholders::_1 ) );
 	}
 
 	//! Set event handler to method with signature void( FaceTracker::Face ).
-	void								connectEventHander( const std::function<void( Face )>& eventHandler );
+	void								connectEventHandler( const std::function<void( Face )>& eventHandler );
 protected:
 	FaceTracker();
 
@@ -427,6 +433,71 @@ public:
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
+//! Structure containing hand data.
+class Hand
+{
+public:
+	Hand();
+
+	const std::vector<ci::ivec2>&			getFingerTipPositions() const;
+	JointName								getJointName() const;
+	const ci::ivec2&						getPalmPosition() const;
+	size_t									getUserId() const;
+
+
+protected:
+	Hand(const std::vector<ci::ivec2>& fingerTipPositions, const ci::ivec2& palmPosition,
+		JointName jointName, size_t userId);
+
+	std::vector<ci::ivec2>					mFingerTipPositions;
+	JointName								mJointName;
+	ci::ivec2								mPalmPosition;
+	size_t									mUserId;
+
+	friend class							HandTracker;
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+class HandTracker
+{
+protected:
+	typedef std::shared_ptr<std::thread>		ThreadRef;
+public:
+	static HandTrackerRef						create();
+	~HandTracker();
+
+	virtual void								start(const DeviceOptions& deviceOptions = DeviceOptions());
+	virtual void								stop();
+	virtual void								update(const ci::Channel16uRef& depth, const std::vector<Skeleton>& skeletons);
+
+	template<typename T, typename Y>
+	inline void									connectEventHandler(T eventHandler, Y* obj)
+	{
+		connectEventHandler(std::bind(eventHandler, obj, std::placeholders::_1));
+	}
+
+	void										connectEventHandler(const std::function<void(std::vector<Hand>)>& eventHandler);
+protected:
+	HandTracker();
+
+
+	ImageResolution								mImageResolution;
+	ci::ivec2									mImageSize;
+
+	ci::Channel16uRef							mChannelDepth;
+	std::vector<Hand>							mHands;
+	std::vector<Skeleton>						mSkeletons;
+
+	std::function<void(std::vector<Hand>)>		mEventHandler;
+	volatile bool								mNewHands;
+	volatile bool								mRunning;
+	ThreadRef									mThread;
+	virtual void								run();
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
 /*! Class representing Kinect frame data. A frame only contains data 
 	for enabled features (e.g., skeletons are empty if skeleton tracking 
 	is disabled). */
@@ -443,6 +514,8 @@ public:
 	const std::string&					getDeviceId() const;
 	//! Returns face if tracking is enabled.
 	const Face&							getFace() const;
+	//! Returns hands if tracking is enabled.
+	const std::vector<Hand>&			getHands() const;
 	//! Returns Vec4f representing floor clip plane when skeleton is present.
 	const ci::vec4&						getFloorClipPlane() const;
 	//! Returns unique, sequential frame ID.
@@ -456,13 +529,14 @@ public:
 protected:
 	Frame( long long frameId, const std::string& deviceId, const ci::Surface8uRef& color, 
 		const ci::Channel16uRef& depth, const ci::Channel16uRef& infrared, 
-		const std::vector<Skeleton>& skeletons, const Face& face, 
+		const std::vector<Skeleton>& skeletons, const Face& face, const std::vector<Hand>& hands,
 		const ci::vec4& floorClipPlane, const ci::vec3& normalToGravity );
 
 	ci::Surface8uRef					mColorSurface;
 	ci::Channel16uRef					mDepthChannel;
 	std::string							mDeviceId;
-	MsKinect::Face						mFace;
+	Face								mFace;
+	std::vector<Hand>					mHands;
 	ci::vec4							mFloorClipPlane;
 	long long							mFrameId;
 	ci::Channel16uRef					mInfraredChannel;
@@ -504,6 +578,10 @@ public:
 	FaceTrackerRef&						getFaceTracker();
 	//! Returns the face tracker for this device.
 	const FaceTrackerRef&				getFaceTracker() const;
+	//! Returns the hand tracker for this device.
+	HandTrackerRef&						getHandTracker();
+	//! Returns the face tracker for this device.
+	const HandTrackerRef&				getHandTracker() const;
 	//! Returns accelerometer reading.
 	ci::quat							getOrientation() const;
 	//! Returns current device angle in degrees between -28 and 28.
@@ -561,8 +639,11 @@ protected:
 	std::vector<Skeleton>				mSkeletons;
 	ci::Surface8uRef					mSurfaceColor;
 	
-	MsKinect::Face						mFace;
-	MsKinect::FaceTrackerRef			mFaceTracker;
+	Face								mFace;
+	FaceTrackerRef						mFaceTracker;
+
+	std::vector<Hand>					mHands;
+	HandTrackerRef						mHandTracker;
 
 	bool								mCapture;
 	bool								mIsSkeletonDevice;

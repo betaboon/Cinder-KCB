@@ -145,11 +145,10 @@ void UserApp::setup()
 	} catch ( MsKinect::Device::ExcUserTrackingEnable ex ) {
 		console() << ex.what() << endl;
 	}
-	
 	mFaceTracker = MsKinect::FaceTracker::create();
 	mFaceTracker->enableCalcMesh( false );
 	mFaceTracker->enableCalcMesh2d();
-	mFaceTracker->connectEventHander( [ & ]( MsKinect::Face face ) {
+	mFaceTracker->connectEventHandler( [ & ]( MsKinect::Face face ) {
 		mFace = face;
 	} );
 	mFaceTracker->start();

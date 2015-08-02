@@ -431,7 +431,7 @@ void FaceTracker::run()
 	}
 }
 
-void FaceTracker::connectEventHander( const function<void( Face )>& eventHandler )
+void FaceTracker::connectEventHandler( const function<void( Face )>& eventHandler )
 {
 	mEventHandler = eventHandler;
 }
@@ -461,6 +461,182 @@ FaceTracker::ExcFaceTrackerCreateResult::ExcFaceTrackerCreateResult( long hr ) t
 FaceTracker::ExcFaceTrackerInit::ExcFaceTrackerInit( long hr ) throw()
 {
 	sprintf( mMessage, "Unable to initialize face tracker. Error: %i", hr );
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+Hand::Hand()
+: mPalmPosition(ivec2())
+{
+}
+
+Hand::Hand(const vector<ivec2>& fingerTipPositions, const ivec2& palmPosition,
+	JointName jointName, size_t userId)
+{
+	mFingerTipPositions = fingerTipPositions;
+	mJointName = jointName;
+	mPalmPosition = palmPosition;
+	mUserId = userId;
+}
+
+const vector<ivec2>& Hand::getFingerTipPositions() const
+{
+	return mFingerTipPositions;
+}
+
+JointName Hand::getJointName() const
+{
+	return mJointName;
+}
+
+const ivec2& Hand::getPalmPosition() const
+{
+	return mPalmPosition;
+}
+
+size_t Hand::getUserId() const
+{
+	return mUserId;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+HandTrackerRef HandTracker::create()
+{
+	return HandTrackerRef(new HandTracker());
+}
+
+HandTracker::HandTracker()
+: mEventHandler(nullptr), mImageResolution(ImageResolution::NUI_IMAGE_RESOLUTION_320x240),
+mImageSize(320, 240), mNewHands(false), mRunning(false)
+{
+}
+
+HandTracker::~HandTracker()
+{
+	stop();
+}
+
+void HandTracker::start(const DeviceOptions& deviceOptions)
+{
+	stop();
+
+	mImageResolution = deviceOptions.getDepthResolution();
+	mImageSize = deviceOptions.getDepthSize();
+	mRunning = true;
+
+	mThread = ThreadRef(new thread(&HandTracker::run, this));
+}
+
+void HandTracker::stop()
+{
+	mRunning = false;
+	if (mThread) {
+		mThread->join();
+		mThread.reset();
+	}
+
+	if (mChannelDepth) {
+		mChannelDepth.reset();
+	}
+	mHands.clear();
+	mSkeletons.clear();
+	mNewHands = false;
+}
+
+void HandTracker::update(const Channel16uRef& depth, const vector<Skeleton>& skeletons)
+{
+	console() << "HandTracker::update" << endl;
+	if (!mNewHands)
+		console() << "no new hands" << endl;
+	if (mEventHandler == nullptr)
+		console() << "no handler" << endl;
+	if (mNewHands && mEventHandler != nullptr) {
+		console() << "calling handler" << endl;
+		mEventHandler( mHands );
+		if (depth) {
+			//mDepthChannel	= Surface16u( depth ).getChannelRed();
+			Surface16u surface(*depth);
+			mChannelDepth = Channel16u::create(surface.getChannelRed());
+		}
+		mSkeletons	= skeletons;
+		mNewHands	= false;
+	}
+}
+
+void HandTracker::connectEventHandler(const function<void(vector<Hand>)>& eventHandler)
+{
+	mEventHandler = eventHandler;
+}
+
+void HandTracker::run()
+{
+	while (mRunning) {
+		if (mNewHands)
+			console() << "still got hands" << endl;
+		if (mChannelDepth)
+			console() << "got depth channel" << endl;
+		if (!mNewHands && mChannelDepth) {
+			console() << "updating hands" << endl;
+			mHands.clear();
+			size_t userId = 1;
+			for (vector<Skeleton>::const_iterator skeletonIt = mSkeletons.begin(); skeletonIt != mSkeletons.end(); ++skeletonIt, ++userId) {
+				for (Skeleton::const_iterator boneIt = skeletonIt->begin(); boneIt != skeletonIt->end(); ++boneIt) {
+					if (boneIt->first == JointName::NUI_SKELETON_POSITION_WRIST_LEFT ||
+						boneIt->first == JointName::NUI_SKELETON_POSITION_WRIST_RIGHT) {
+						vector<ivec2> fingers;
+						const Bone& bone = boneIt->second;
+						const vec3& handPos = bone.getPosition();
+						// TODO properly port the following line
+						//ivec2 centroid = MsKinect::mapSkeletonCoordToDepth(handPos, mImageResolution);
+						ivec2 centroid = ivec2(1.5f );
+						vec3 palm( (float)centroid.x, (float)centroid.y, getDepthAtCoord( mChannelDepth, centroid ) );
+						
+
+						float radius = (float)mImageSize.y * 0.2f;
+						float scale = 1.0f - handPos.z * 0.25f;
+						Area bounds(Rectf(
+							(float)centroid.x - radius, (float)centroid.y - radius,
+							(float)centroid.x + radius, (float)centroid.y + radius
+							) * scale);
+						bounds.x1 = math<int32_t>::clamp( bounds.x1, 1, mImageSize.x - 1 );
+						bounds.y1 = math<int32_t>::clamp( bounds.y1, 1, mImageSize.y - 1 );
+						bounds.x2 = math<int32_t>::clamp( bounds.x2, bounds.x1, mImageSize.x - 1 );
+						bounds.y2 = math<int32_t>::clamp( bounds.y2, bounds.y1, mImageSize.y - 1 );
+
+						ivec2 v0;
+						ivec2 v1;
+						for (v0.x = bounds.x1; v0.x <= bounds.x2; ++v0.x) {
+							for (v0.y = bounds.y1; v0.y <= bounds.y2; ++v0.y) {
+								vec3 pt0( (float)v0.x, (float)v0.y, getDepthAtCoord( mChannelDepth, v0 ) );
+								float d0 = glm::distance( pt0, palm );
+								size_t numGreaterThan = 0;
+								for (v1.x = v0.x - 1; v1.x <= v0.x + 1; ++v1.x) {
+									for (v1.y = v0.y - 1; v1.y <= v0.y + 1; ++v1.y) {
+										if (v0 != v1) {
+											vec3 pt1( (float)v1.x, (float)v1.y, getDepthAtCoord( mChannelDepth, v1 ) );
+											float d1 = glm::distance( pt1, palm );
+											if (d1 > d0) {
+												++numGreaterThan;
+												d0 = d1;
+											}
+										}
+									}
+								}
+								if (numGreaterThan >= 8) {
+									fingers.push_back(v0);
+								}
+							}
+						}
+						if (!fingers.empty()) {
+							mHands.push_back( Hand(fingers, centroid, boneIt->first, userId) );
+						}
+					}
+				}
+			}
+			mNewHands = true;
+		}
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -876,6 +1052,11 @@ bool DeviceOptions::isFaceTrackingEnabled() const
 	return mEnabledFaceTracking;
 }
 
+bool DeviceOptions::isHandTrackingEnabled() const
+{
+	return mEnabledHandTracking;
+}
+
 bool DeviceOptions::isInfraredEnabled() const
 {
 	return mEnabledInfrared;
@@ -997,8 +1178,8 @@ Frame::Frame()
 
 Frame::Frame( long long frameId, const std::string& deviceId, const Surface8uRef& color, 
 			 const Channel16uRef& depth, const Channel16uRef& infrared, const std::vector<Skeleton>& skeletons, 
-			 const Face& face, const vec4& floorClipPlane, const vec3& normalToGravity ) 
-: mColorSurface( color ), mDepthChannel( depth ), mDeviceId( deviceId ), mFace( face ), 
+			 const Face& face, const std::vector<Hand>& hands, const vec4& floorClipPlane, const vec3& normalToGravity ) 
+		: mColorSurface(color), mDepthChannel(depth), mDeviceId(deviceId), mFace(face), mHands( hands ),
 mFloorClipPlane( floorClipPlane ), mFrameId( frameId ), mInfraredChannel( infrared ), 
 mNormalToGravity( normalToGravity ), mSkeletons( skeletons )
 {
@@ -1154,6 +1335,16 @@ FaceTrackerRef& Device::getFaceTracker()
 const FaceTrackerRef& Device::getFaceTracker() const
 {
 	return mFaceTracker;
+}
+
+HandTrackerRef& Device::getHandTracker()
+{
+	return mHandTracker;
+}
+
+const HandTrackerRef& Device::getHandTracker() const
+{
+	return mHandTracker;
 }
 
 quat Device::getOrientation() const
@@ -1439,10 +1630,19 @@ void Device::start( const DeviceOptions& deviceOptions )
 
 		if ( mDeviceOptions.isFaceTrackingEnabled() ) {
 			mFaceTracker = FaceTracker::create();
-			mFaceTracker->connectEventHander( [ & ]( MsKinect::Face face ) {
+			mFaceTracker->connectEventHandler( [ & ]( MsKinect::Face face ) {
 				mFace = face;
 			} );
 			mFaceTracker->start( mDeviceOptions );
+		}
+
+		if (mDeviceOptions.isHandTrackingEnabled()) {
+			console() << "Enabling HandTracking." << endl;
+			mHandTracker = HandTracker::create();
+			mHandTracker->connectEventHandler( [ & ]( std::vector<MsKinect::Hand> hands ) {
+				mHands = hands;
+			} );
+			mHandTracker->start( mDeviceOptions );
 		}
 		mCapture = true;
 	}
@@ -1499,6 +1699,10 @@ void Device::stop()
 	if ( mFaceTracker ) {
 		mFaceTracker->stop();
 		mFaceTracker.reset();
+	}
+	if (mHandTracker) {
+		mHandTracker->stop();
+		mHandTracker.reset();
 	}
 	KinectCloseSensor( mDeviceOptions.getDeviceHandle() );
 	init( true );
@@ -1573,9 +1777,13 @@ void Device::update()
 		mFaceTracker->update( mSurfaceColor, mChannelDepth );
 	}
 
+	if ( mDeviceOptions.isHandTrackingEnabled() && mHandTracker && mChannelDepth ) {
+		mHandTracker->update( mChannelDepth, mSkeletons );
+	}
+
 	if ( mEventHandler ) {
 		Frame frame( mFrameId, mDeviceOptions.getDeviceId(), mSurfaceColor, mChannelDepth, mChannelInfrared, 
-					 mSkeletons, mFace, floorClipPlane, normalToGravity );
+					 mSkeletons, mFace, mHands, floorClipPlane, normalToGravity );
 		mEventHandler( frame );
 	}
 	++mFrameId;

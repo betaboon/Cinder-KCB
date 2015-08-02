@@ -34,13 +34,15 @@
 * 
 */
 
-#include "cinder/app/AppBasic.h"
+#include "cinder/app/App.h"
+#include "cinder/app/RendererGl.h"
 #include "cinder/gl/Texture.h"
+#include "cinder/gl/gl.h"
 #include "cinder/params/Params.h"
 #include "HandTracker.h"
 #include "Kinect.h"
 
-class HandApp : public ci::app::AppBasic 
+class HandApp : public ci::app::App
 {
 public:
 	void 										draw();	
@@ -49,8 +51,9 @@ public:
 private:
 	MsKinect::DeviceRef							mDevice;
 	MsKinect::Frame								mFrame;
+
+	std::vector<MsKinect::Hand>					mHands;
 	MsKinect::HandTrackerRef					mHandTracker;
-	std::vector<MsKinect::HandTracker::Hand>	mHands;
 };
 
 using namespace ci;
@@ -59,13 +62,13 @@ using namespace std;
 
 void HandApp::draw()
 {
-	gl::setViewport( getWindowBounds() );
+	gl::viewport( getWindowSize() );
 	gl::clear();
 	gl::setMatricesWindow( getWindowSize() );
 	
 	if ( mFrame.getDepthChannel() ) {
 
-		gl::TextureRef tex = gl::Texture::create( mFrame.getDepthChannel() );
+		gl::TextureRef tex = gl::Texture::create( *MsKinect::depthChannelToSurface( mFrame.getDepthChannel() ) );
 
 		gl::color( ColorAf::white() );
 		gl::enable( GL_TEXTURE_2D );
@@ -73,26 +76,20 @@ void HandApp::draw()
 		gl::disable( GL_TEXTURE_2D );
 
 		gl::pushMatrices();
-		gl::scale( Vec2f( getWindowSize() ) / Vec2f( tex->getSize() ) );
+		gl::scale( vec2( getWindowSize() ) / vec2( tex->getSize() ) );
 
 		for ( const auto& skeleton : mFrame.getSkeletons() ) {
 			for ( const auto& joint : skeleton ) {
 				const MsKinect::Bone& bone = joint.second;
-
-				Vec2i v0 = MsKinect::mapSkeletonCoordToDepth( 
-					bone.getPosition(), 
-					mDevice->getDeviceOptions().getDepthResolution() 
-					);
-				Vec2i v1 = MsKinect::mapSkeletonCoordToDepth( 
-					skeleton.at( bone.getStartJoint() ).getPosition(), 
-					mDevice->getDeviceOptions().getDepthResolution() 
-					);
+				ivec2 v0 = mDevice->mapSkeletonCoordToDepth( bone.getPosition() );
+				ivec2 v1 = mDevice->mapSkeletonCoordToDepth( skeleton.at( bone.getStartJoint() ).getPosition() );
 				gl::drawLine( v0, v1 );
 				gl::drawSolidCircle( v0, 5.0f, 16 );
 			}
 		}
 
 		for ( const auto& hand : mHands ) {
+			console() << "drawing hand" << endl;
 			for ( const auto& finger : hand.getFingerTipPositions() ) {
 				gl::drawStrokedCircle( finger, 5.0f, 24 );
 			}
@@ -117,6 +114,7 @@ void HandApp::keyDown( KeyEvent event )
 void HandApp::setup()
 {
 	setFrameRate( 60.0f );
+	glLineWidth( 2.0f );
 
 	mDevice = MsKinect::Device::create();
 	mDevice->connectEventHandler( [ & ]( MsKinect::Frame frame )
@@ -147,11 +145,12 @@ void HandApp::setup()
 	}
 
 	mHandTracker = MsKinect::HandTracker::create();
-	mHandTracker->connectEventHander( [ & ]( vector<MsKinect::HandTracker::Hand> hands )
+	mHandTracker->connectEventHandler( [ & ]( vector<MsKinect::Hand> hands )
 	{
+		console() << "putting hands" << endl;
 		mHands = hands;
 	} );
 	mHandTracker->start( mDevice->getDeviceOptions() );
 }
 
-CINDER_APP_BASIC( HandApp, RendererGl )
+CINDER_APP( HandApp, RendererGl )
