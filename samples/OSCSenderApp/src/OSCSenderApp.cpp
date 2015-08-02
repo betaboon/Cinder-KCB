@@ -84,11 +84,14 @@ void OSCSenderApp::draw()
 {
 	if (mFrame.getDepthChannel()) {
 		int i = 0;
+		ivec2 scale = MsKinect::depthChannelToSurface( mFrame.getDepthChannel() )->getSize();
 		for (const auto& skeleton : mFrame.getSkeletons()) {
 			osc::Message message;
 			message.addIntArg( MESSAGE_START );
-			message.addIntArg( i++ );
+			message.addIntArg( scale.x );
+			message.addIntArg( scale.y );
 			message.addIntArg( skeleton.size() );
+			message.addIntArg( i++ );
 
 			int j = 0;
 			for (const auto& joint : skeleton) {
@@ -96,14 +99,12 @@ void OSCSenderApp::draw()
 
 				ivec2 v0 = mDevice->mapSkeletonCoordToDepth( bone.getPosition() );
 				ivec2 v1 = mDevice->mapSkeletonCoordToDepth( skeleton.at( bone.getStartJoint() ).getPosition() );
-				/*gl::drawLine(v0, v1);
-				gl::drawSolidCircle(v0, 5.0f, 16);*/
 				message.addIntArg( j++ );
 				message.addIntArg( v0.x );
 				message.addIntArg( v0.y );
 				message.addIntArg( v1.x );
 				message.addIntArg( v1.y );
-				console() << i << " - bone -- " << j << "/" << skeleton.size() << " --- " << v0 << " - " << v1 << endl;
+				//console() << i << " - bone -- " << j << "/" << skeleton.size() << " --- " << v0 << " - " << v1 << endl;
 			}
 			message.addIntArg(MESSAGE_END);
 			message.setAddress((boost::format("/cinder/kinect/skeleton/%d") % i).str());
