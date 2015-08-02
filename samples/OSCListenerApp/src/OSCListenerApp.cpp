@@ -8,61 +8,68 @@ using namespace ci::app;
 using namespace std;
 
 class OSCReceiverApp : public App {
-  public:
+public:
+	#define MESSAGE_START 0xDEADBABE
+	#define MESSAGE_END   0xDEADBEEF
+	#define MESSAGE_FRAME_SIZE 4
 	void setup() override;
 	void update() override;
 	void draw() override;
 
-	osc::Listener 	listener;
+	osc::Listener 	mListener;
 };
 
 void OSCReceiverApp::setup()
 {
-	listener.setup(3000);
+	mListener.setup(3000);
 }
 
 
 void OSCReceiverApp::update()
 {
 
-	while (listener.hasWaitingMessages()) {
+	while (mListener.hasWaitingMessages()) {
 		osc::Message message;
-		listener.getNextMessage(&message);
+		mListener.getNextMessage(&message);
+		console() << "Address: " << message.getAddress() << endl;
+		if (message.getNumArgs() < MESSAGE_FRAME_SIZE)  {
+			console() << "Message too small!" << endl;
+			continue;
+		}
+		try {
+			if (
+				MESSAGE_START != message.getArgAsInt32(0) ||
+				MESSAGE_END != message.getArgAsInt32(message.getNumArgs() - 1)
+				) {
+				console() << "Invalid message!" << endl;
+				continue;
+			}
 
-		console() << "New message received" << std::endl;
-		console() << "Address: " << message.getAddress() << std::endl;
-		console() << "Num Arg: " << message.getNumArgs() << std::endl;
-		for (int i = 0; i < message.getNumArgs(); i++) {
-			console() << "-- Argument " << i << std::endl;
-			console() << "---- type: " << message.getArgTypeName(i) << std::endl;
-			if (message.getArgType(i) == osc::TYPE_INT32) {
-				try {
-					console() << "------ value: " << message.getArgAsInt32(i) << std::endl;
-				}
-				catch (...) {
-					console() << "Exception reading argument as int32" << std::endl;
-				}
+			int skeletonId = message.getArgAsInt32(1);
+			int skeletonSize = message.getArgAsInt32(2);
+
+			if ((message.getNumArgs() - MESSAGE_FRAME_SIZE) != skeletonSize * 5) {
+				console() << "Bones are missing!" << endl;
+				continue;
 			}
-			else if (message.getArgType(i) == osc::TYPE_FLOAT) {
-				try {
-					console() << "------ value: " << message.getArgAsFloat(i) << std::endl;
-				}
-				catch (...) {
-					console() << "Exception reading argument as float" << std::endl;
-				}
-			}
-			else if (message.getArgType(i) == osc::TYPE_STRING) {
-				try {
-					console() << "------ value: " << message.getArgAsString(i).c_str() << std::endl;
-				}
-				catch (...) {
-					console() << "Exception reading argument as string" << std::endl;
-				}
+
+			for (int i = 0; i < skeletonSize; i++) {
+				int offset = MESSAGE_FRAME_SIZE + i * 5;
+				int boneId = message.getArgAsInt32(offset);
+				ivec2 v0 = ivec2(
+					message.getArgAsInt32(offset + 1),
+					message.getArgAsInt32(offset + 2)
+					);
+				ivec2 v1 = ivec2(
+					message.getArgAsInt32(offset + 3),
+					message.getArgAsInt32(offset + 4)
+					);
+				console() << skeletonId << " - bone -- " << boneId << "/" << skeletonSize << " --- " << v0 << " - " << v1 << endl;
 			}
 		}
-/*
-		if (message.getNumArgs() != 0 && message.getArgType(0) == osc::TYPE_FLOAT)
-			positionX = message.getArgAsFloat(0);*/
+		catch (...) {
+			console() << "Exception reading an argument" << endl;
+		}
 	}
 }
 

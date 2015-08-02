@@ -11,7 +11,10 @@ using namespace ci::app;
 using namespace std;
 
 class OSCSenderApp : public App {
-  public:
+
+public:
+	#define MESSAGE_START 0xDEADBABE
+	#define MESSAGE_END   0xDEADBEEF
 	void setup() override;
 	void setupKinect();
 	void setupOSC(int port);
@@ -82,37 +85,30 @@ void OSCSenderApp::draw()
 	if (mFrame.getDepthChannel()) {
 		int i = 0;
 		for (const auto& skeleton : mFrame.getSkeletons()) {
-			console() << " -- skeleton - " << ++i << " --" << endl;
 			osc::Message message;
-			message.setAddress((boost::format("/cinder/osc/kinect/skeleton/%d") % i).str());
+			message.addIntArg( MESSAGE_START );
+			message.addIntArg( i++ );
+			message.addIntArg( skeleton.size() );
+
 			int j = 0;
 			for (const auto& joint : skeleton) {
-				console() << "bone" << ++j;
 				const MsKinect::Bone& bone = joint.second;
 
-				ivec2 v0 = mDevice->mapSkeletonCoordToDepth(bone.getPosition());
-				ivec2 v1 = mDevice->mapSkeletonCoordToDepth(skeleton.at(bone.getStartJoint()).getPosition());
+				ivec2 v0 = mDevice->mapSkeletonCoordToDepth( bone.getPosition() );
+				ivec2 v1 = mDevice->mapSkeletonCoordToDepth( skeleton.at( bone.getStartJoint() ).getPosition() );
 				/*gl::drawLine(v0, v1);
 				gl::drawSolidCircle(v0, 5.0f, 16);*/
-				message.addIntArg(v0.x);
-				message.addIntArg(v0.y);
-				message.addIntArg(v1.x);
-				message.addIntArg(v1.y);
-				console() << v0 << " - " << v1 << endl;
+				message.addIntArg( j++ );
+				message.addIntArg( v0.x );
+				message.addIntArg( v0.y );
+				message.addIntArg( v1.x );
+				message.addIntArg( v1.y );
+				console() << i << " - bone -- " << j << "/" << skeleton.size() << " --- " << v0 << " - " << v1 << endl;
 			}
-			mSender.sendMessage(message);
+			message.addIntArg(MESSAGE_END);
+			message.setAddress((boost::format("/cinder/kinect/skeleton/%d") % i).str());
+			mSender.sendMessage( message );
 		}
-
-		//if (mFace.getMesh2d()->getNumVertices() > 0) {
-		//	gl::pushMatrices();
-		//	gl::scale(0.5f, 0.5f);
-		//	gl::color(ColorAf::white());
-		//	gl::enableWireframe();
-		//	gl::draw(*mFace.getMesh2d());
-		//	gl::disableWireframe();
-		//	gl::popMatrices();
-		//}
-		//gl::popMatrices();
 	}
 }
 CINDER_APP(OSCSenderApp, Renderer2d)

@@ -13,6 +13,7 @@
     <ProjectGuid>{6520075B-1DA1-409E-BF1F-139A25597810}</ProjectGuid>
     <RootNamespace>OSCListenerApp</RootNamespace>
     <Keyword>Win32Proj</Keyword>
+    <ProjectName>OSCListenerApp</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
