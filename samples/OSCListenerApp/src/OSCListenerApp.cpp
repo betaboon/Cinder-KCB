@@ -14,7 +14,7 @@ public:
 
 	Bone(ivec2 _v0, ivec2 _v1) { v0 = _v0; v1 = _v1; }
 };
-typedef std::map<int, Skeleton> Skeleton;
+typedef std::vector<Bone> Skeleton;
 
 class OSCListenerApp : public App {
 public:
@@ -88,7 +88,7 @@ void OSCListenerApp::update()
 					message.getArgAsInt32( offset + 3 ),
 					message.getArgAsInt32( offset + 4 )
 					);
-				skeleton[boneId] = Bone( v0, v1 );
+				skeleton.push_back( Bone( v0, v1 ) );
 				//console() << skeletonId << " - bone -- " << boneId << "/" << skeletonSize << " --- " << v0 << " - " << v1 << endl;
 			}
 			mSkeletons[skeletonId] = skeleton;
