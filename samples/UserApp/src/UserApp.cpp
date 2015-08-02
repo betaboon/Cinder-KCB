@@ -81,8 +81,8 @@ void UserApp::draw()
 			for ( const auto& joint : skeleton ) {
 				const MsKinect::Bone& bone = joint.second;
 
-				vec2 v0 = mDevice->mapSkeletonCoordToDepth( bone.getPosition() );
-				vec2 v1 = mDevice->mapSkeletonCoordToDepth( skeleton.at( bone.getStartJoint() ).getPosition() );
+				ivec2 v0 = mDevice->mapSkeletonCoordToDepth( bone.getPosition() );
+				ivec2 v1 = mDevice->mapSkeletonCoordToDepth( skeleton.at( bone.getStartJoint() ).getPosition() );
 				gl::drawLine( v0, v1 );
 				gl::drawSolidCircle( v0, 5.0f, 16 );
 			}
@@ -97,7 +97,6 @@ void UserApp::draw()
 			gl::disableWireframe();
 			gl::popMatrices();
 		}
-
 		gl::popMatrices();
 	}
 }

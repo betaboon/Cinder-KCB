@@ -352,7 +352,7 @@ void ParticleApp::setup()
 	////////////////////////////////////////////////////////////////
 	// Set up parameters
 
-	mParams = params::InterfaceGl::create( "PARAMS", vec2( 200, 400 ) );
+	mParams = params::InterfaceGl::create( "PARAMS", ivec2( 200, 400 ) );
 	mParams->addParam( "Frame rate",		&mFrameRate,			"", true );
 	mParams->addParam( "Full screen",		&mFullScreen,			"key=f" );
 	mParams->addButton( "Quit",				[ & ]() { quit(); },	"key=q" );

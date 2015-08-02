@@ -308,7 +308,7 @@ void FaceTracker::run()
 			face.mMesh			= TriMesh::create( TriMesh::Format().positions() );
 			face.mMesh2d		= TriMesh::create( TriMesh::Format().positions() );
 			face.mUserId		= mUserId;
-			face.mPoseMatrix	= mat4();
+			face.mPoseMatrix	= mat4( 1.0f );
 
 			FT_VECTOR3D* hint = 0;
 			if ( mHeadPoints.size() == 2 ) {
@@ -358,11 +358,11 @@ void FaceTracker::run()
 
 						// TODO: check that this port works
 						// could this be done more efficiently/elegantly?
-						face.mPoseMatrix = glm::scale( vec3( 1 ) * scale );
 						face.mPoseMatrix *= glm::translate( t );
-						face.mPoseMatrix *= glm::translate( -t );
 						face.mPoseMatrix *= glm::eulerAngleYXZ( rotation[1], rotation[0], rotation[2] );
+						face.mPoseMatrix *= glm::translate( -t );
 						face.mPoseMatrix *= glm::translate( t );
+						face.mPoseMatrix *= glm::scale( vec3( 1.0f ) * scale );
 					}
 
 					size_t numVertices	= mModel->GetVertexCount();
