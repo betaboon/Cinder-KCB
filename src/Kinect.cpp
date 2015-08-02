@@ -546,13 +546,7 @@ void HandTracker::stop()
 
 void HandTracker::update(const Channel16uRef& depth, const vector<Skeleton>& skeletons)
 {
-	console() << "HandTracker::update" << endl;
-	if (!mNewHands)
-		console() << "no new hands" << endl;
-	if (mEventHandler == nullptr)
-		console() << "no handler" << endl;
 	if (mNewHands && mEventHandler != nullptr) {
-		console() << "calling handler" << endl;
 		mEventHandler( mHands );
 		if (depth) {
 			//mDepthChannel	= Surface16u( depth ).getChannelRed();
